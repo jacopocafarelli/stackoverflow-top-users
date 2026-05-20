@@ -2,7 +2,7 @@
 An Android app that displays the top 20 StackOverFlow users sorted by reputation.
 The app also allows to follow and unfollow users, this is only simulated by persisting locally the follow status.
 
-![Top Users Screen](./docs/images/top-users.png)
+<img src="./docs/images/top-users.png" alt="drawing" width="240"/>
 
 ## Features implemented
 - Fetching and displays of the top 20 StackOverflow users sorted by reputation.
@@ -52,6 +52,7 @@ In the code the layers are separated in respective packages:
 ### How the data flows
 This app implements the Unidirectional Data Flow (UDF) pattern. UI events are passed down to the ViewModel and UseCases, while the data layer merges local and remote sources to push state back up to the presentation layer via Kotlin Flow.
 
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                 Compose UI Screen                       │
 │             (TopStackOverflowUsersScreen)               │
@@ -85,6 +86,7 @@ This app implements the Unidirectional Data Flow (UDF) pattern. UI events are pa
 │  Retrofit  │   │   DataStore  │───────────┘
 │  (Network) │   │   (Local)    │
 └────────────┘   └──────────────┘
+```
 
 ### Gradle project structure
 Currently, the codebase contains a single Gradle module (`:app`). If the app were to grow with new features (e.g., Authentication, User Profile), these features should be extracted into independent feature modules.
