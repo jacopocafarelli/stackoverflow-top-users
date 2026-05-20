@@ -3,6 +3,7 @@ package com.jc.topstackoverflowusers.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jc.topstackoverflowusers.domain.usecase.GetTopUsersUseCase
+import com.jc.topstackoverflowusers.presentation.mapper.toErrorType
 import com.jc.topstackoverflowusers.presentation.model.TopUsersUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,9 +35,8 @@ class TopStackoverflowUsersViewModel @Inject constructor(
                     _uiState.update { TopUsersUiState.Success(users) }
                 },
                 onFailure = { exception ->
-                    val errorMessage = exception.message
-                        ?: "An unexpected error occurred. Please try again."
-                    _uiState.update { TopUsersUiState.Error(errorMessage) }
+                    val errorType = exception.toErrorType()
+                    _uiState.update { TopUsersUiState.Error(errorType) }
                 }
             )
         }

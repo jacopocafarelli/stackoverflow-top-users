@@ -38,8 +38,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.jc.topstackoverflowusers.domain.model.StackOverflowUser
+import com.jc.topstackoverflowusers.presentation.model.ErrorType
 import com.jc.topstackoverflowusers.presentation.model.TopUsersUiState
 import com.jc.topstackoverflowusers.ui.theme.TopStackoverflowUsersTheme
+import retrofit2.HttpException
+import java.io.IOException
 
 @Composable
 fun TopStackOverflowUsersScreen(
@@ -64,7 +67,7 @@ fun TopStackOverflowUsersScreen(
         when (uiState) {
             is TopUsersUiState.Error -> {
                 Error(
-                    message = uiState.message,
+                    errorType = uiState.errorType,
                     onRetry = onRetry,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -107,7 +110,7 @@ private fun Loading(modifier: Modifier = Modifier) {
 
 @Composable
 private fun Error(
-    message: String,
+    errorType: ErrorType,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -128,7 +131,7 @@ private fun Error(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = message,
+            text = errorType.toDisplayMessage(),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -227,6 +230,14 @@ fun LoadingPreview() {
 @Preview(showBackground = true)
 fun ErrorPreview() {
     TopStackoverflowUsersTheme {
-        Error(message = "Server error", onRetry = {}, modifier = Modifier.fillMaxSize())
+        Error(errorType = ErrorType.NETWORK, onRetry = {}, modifier = Modifier.fillMaxSize())
+    }
+}
+
+fun ErrorType.toDisplayMessage(): String {
+    return when (this) {
+        ErrorType.NETWORK -> "No internet connection. Please check your network and try again."
+        ErrorType.SERVER -> "Server error occurred."
+        else -> "An unexpected error occurred. Please try again."
     }
 }

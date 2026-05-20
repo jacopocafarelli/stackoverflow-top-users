@@ -7,5 +7,9 @@ sealed interface TopUsersUiState {
 
     data class Success(val users: List<StackOverflowUser>) : TopUsersUiState
 
-    data class Error(val message: String) : TopUsersUiState
+    data class Error(val errorType: ErrorType) : TopUsersUiState
+}
+
+enum class ErrorType {
+    NETWORK, SERVER, GENERIC
 }
