@@ -2,7 +2,9 @@ package com.jc.topstackoverflowusers.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jc.topstackoverflowusers.domain.usecase.FollowUserUseCase
 import com.jc.topstackoverflowusers.domain.usecase.GetTopUsersUseCase
+import com.jc.topstackoverflowusers.domain.usecase.UnfollowUserUseCase
 import com.jc.topstackoverflowusers.presentation.mapper.toErrorType
 import com.jc.topstackoverflowusers.presentation.model.TopUsersUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +18,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TopStackoverflowUsersViewModel @Inject constructor(
-    private val getTopUsersUseCase: GetTopUsersUseCase
+    private val getTopUsersUseCase: GetTopUsersUseCase,
+    private val followUserUseCase: FollowUserUseCase,
+    private val unfollowUserUseCase: UnfollowUserUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<TopUsersUiState>(TopUsersUiState.Loading)
@@ -47,10 +51,14 @@ class TopStackoverflowUsersViewModel @Inject constructor(
     }
 
     fun onFollowClicked(accountId: Int) {
-        // TODO: call use case to follow
+        viewModelScope.launch {
+            followUserUseCase(accountId)
+        }
     }
 
     fun onUnfollowClicked(accountId: Int) {
-        // TODO: call use case to unfollow
+        viewModelScope.launch {
+            unfollowUserUseCase(accountId)
+        }
     }
 }

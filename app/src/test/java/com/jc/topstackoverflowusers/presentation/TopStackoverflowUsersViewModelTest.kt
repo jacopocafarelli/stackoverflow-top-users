@@ -2,7 +2,9 @@ package com.jc.topstackoverflowusers.presentation
 
 import com.google.common.truth.Truth.assertThat
 import com.jc.topstackoverflowusers.domain.model.StackOverflowUser
+import com.jc.topstackoverflowusers.domain.usecase.FollowUserUseCase
 import com.jc.topstackoverflowusers.domain.usecase.GetTopUsersUseCase
+import com.jc.topstackoverflowusers.domain.usecase.UnfollowUserUseCase
 import com.jc.topstackoverflowusers.presentation.model.ErrorType
 import com.jc.topstackoverflowusers.presentation.model.TopUsersUiState
 import com.jc.topstackoverflowusers.test.rules.MainDispatcherRule
@@ -27,10 +29,12 @@ class TopStackoverflowUsersViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val useCase = mock<GetTopUsersUseCase>()
+    private val getUsersUseCase = mock<GetTopUsersUseCase>()
+    private val followUserUseCase = mock<FollowUserUseCase>()
+    private val unfollowUserUseCase = mock<UnfollowUserUseCase>()
 
     @Test
-    fun `when init block runs and usecase succeeds, state is updated to Success and contains users`() =
+    fun `when init block runs and getting user succeeds, state is updated to Success and contains users`() =
         runTest {
             val expectedUsers = listOf(
                 StackOverflowUser(
@@ -41,9 +45,9 @@ class TopStackoverflowUsersViewModelTest {
                     isFollowed = true
                 )
             )
-            whenever(useCase()).thenReturn(flowOf(expectedUsers))
+            whenever(getUsersUseCase()).thenReturn(flowOf(expectedUsers))
 
-            val viewModel = TopStackoverflowUsersViewModel(useCase)
+            val viewModel = createViewModel()
 
             val currentState = viewModel.uiState.value
             assertThat(currentState).isInstanceOf(TopUsersUiState.Success::class.java)
@@ -52,13 +56,13 @@ class TopStackoverflowUsersViewModelTest {
         }
 
     @Test
-    fun `when init block runs and usecase fails with io error, state maps to network Error`() =
+    fun `when init block runs and getting user fails with io error, state maps to network Error`() =
         runTest {
             val exceptionMessage = "Emulated exception"
             val expectedException = IOException(exceptionMessage)
-            whenever(useCase()).thenReturn(flow { throw expectedException })
+            whenever(getUsersUseCase()).thenReturn(flow { throw expectedException })
 
-            val viewModel = TopStackoverflowUsersViewModel(useCase)
+            val viewModel = createViewModel()
 
             val currentState = viewModel.uiState.value
             assertThat(currentState).isInstanceOf(TopUsersUiState.Error::class.java)
@@ -67,16 +71,16 @@ class TopStackoverflowUsersViewModelTest {
         }
 
     @Test
-    fun `when init block runs and usecase fails with http error, state maps to network Error`() =
+    fun `when init block runs and getting user fails with http error, state maps to network Error`() =
         runTest {
             val errorResponse = Response.error<Any>(
                 500,
                 "{\"error\": \"Generic error\"}".toResponseBody(null)
             )
             val expectedException = HttpException(errorResponse)
-            whenever(useCase()).thenReturn(flow { throw expectedException })
+            whenever(getUsersUseCase()).thenReturn(flow { throw expectedException })
 
-            val viewModel = TopStackoverflowUsersViewModel(useCase)
+            val viewModel = createViewModel()
 
             val currentState = viewModel.uiState.value
             assertThat(currentState).isInstanceOf(TopUsersUiState.Error::class.java)
@@ -85,12 +89,12 @@ class TopStackoverflowUsersViewModelTest {
         }
 
     @Test
-    fun `when init block runs and usecase fails with generic error, state maps to default Error`() =
+    fun `when init block runs and getting user fails with generic error, state maps to default Error`() =
         runTest {
             val expectedException = RuntimeException()
-            whenever(useCase()).thenReturn(flow { throw expectedException })
+            whenever(getUsersUseCase()).thenReturn(flow { throw expectedException })
 
-            val viewModel = TopStackoverflowUsersViewModel(useCase)
+            val viewModel = createViewModel()
 
             val currentState = viewModel.uiState.value
             assertThat(currentState).isInstanceOf(TopUsersUiState.Error::class.java)
@@ -109,12 +113,12 @@ class TopStackoverflowUsersViewModelTest {
                 isFollowed = true
             )
         )
-        whenever(useCase()).thenReturn(
+        whenever(getUsersUseCase()).thenReturn(
             flow { throw RuntimeException("Fail") },
             flowOf(expectedUsers)
         )
 
-        val viewModel = TopStackoverflowUsersViewModel(useCase)
+        val viewModel = createViewModel()
         assertThat(viewModel.uiState.value).isInstanceOf(TopUsersUiState.Error::class.java)
 
         viewModel.onRetryClicked()
@@ -122,6 +126,34 @@ class TopStackoverflowUsersViewModelTest {
         val currentState = viewModel.uiState.value
         assertThat(currentState).isInstanceOf(TopUsersUiState.Success::class.java)
         assertThat((currentState as TopUsersUiState.Success).users).isEqualTo(expectedUsers)
-        verify(useCase, times(2)).invoke()
+        verify(getUsersUseCase, times(2)).invoke()
     }
+
+    @Test
+    fun `when onFollowClicked is called, followUserUseCase is invoked`() = runTest {
+        whenever(getUsersUseCase()).thenReturn(flowOf(emptyList()))
+        val viewModel = createViewModel()
+        val accountId = 1
+
+        viewModel.onFollowClicked(accountId)
+
+        verify(followUserUseCase).invoke(accountId)
+    }
+
+    @Test
+    fun `when onUnfollowClicked is called, unfollowUserUseCase is invoked`() = runTest {
+        whenever(getUsersUseCase()).thenReturn(flowOf(emptyList()))
+        val viewModel = createViewModel()
+        val accountId = 123
+
+        viewModel.onUnfollowClicked(accountId)
+
+        verify(unfollowUserUseCase).invoke(accountId)
+    }
+
+    private fun createViewModel() = TopStackoverflowUsersViewModel(
+        getTopUsersUseCase = getUsersUseCase,
+        followUserUseCase = followUserUseCase,
+        unfollowUserUseCase = unfollowUserUseCase
+    )
 }
