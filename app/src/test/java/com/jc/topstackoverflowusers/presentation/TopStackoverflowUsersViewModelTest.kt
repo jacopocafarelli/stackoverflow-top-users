@@ -3,16 +3,21 @@ package com.jc.topstackoverflowusers.presentation
 import com.google.common.truth.Truth.assertThat
 import com.jc.topstackoverflowusers.domain.model.StackOverflowUser
 import com.jc.topstackoverflowusers.domain.usecase.GetTopUsersUseCase
+import com.jc.topstackoverflowusers.presentation.model.ErrorType
 import com.jc.topstackoverflowusers.presentation.model.TopUsersUiState
 import com.jc.topstackoverflowusers.test.rules.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.IOException
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import retrofit2.HttpException
+import retrofit2.Response
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TopStackoverflowUsersViewModelTest {
@@ -43,10 +48,10 @@ class TopStackoverflowUsersViewModelTest {
     }
 
     @Test
-    fun `when init block runs and usecase fails with a message, state is updated to Error`() =
+    fun `when init block runs and usecase fails with io error, state maps to network Error`() =
         runTest {
             val exceptionMessage = "Emulated exception"
-            val expectedException = RuntimeException(exceptionMessage)
+            val expectedException = IOException(exceptionMessage)
             whenever(useCase()).thenReturn(Result.failure(expectedException))
 
             val viewModel = TopStackoverflowUsersViewModel(useCase)
@@ -54,11 +59,29 @@ class TopStackoverflowUsersViewModelTest {
             val currentState = viewModel.uiState.value
             assertThat(currentState).isInstanceOf(TopUsersUiState.Error::class.java)
             val errorState = currentState as TopUsersUiState.Error
-            assertThat(errorState.message).isEqualTo(exceptionMessage)
+            assertThat(errorState.errorType).isEqualTo(ErrorType.NETWORK)
         }
 
     @Test
-    fun `when init block runs and usecase fails without a message, state maps to default Error`() =
+    fun `when init block runs and usecase fails with http error, state maps to network Error`() =
+        runTest {
+            val errorResponse = Response.error<Any>(
+                500,
+                "{\"error\": \"Generic error\"}".toResponseBody(null)
+            )
+            val expectedException = HttpException(errorResponse)
+            whenever(useCase()).thenReturn(Result.failure(expectedException))
+
+            val viewModel = TopStackoverflowUsersViewModel(useCase)
+
+            val currentState = viewModel.uiState.value
+            assertThat(currentState).isInstanceOf(TopUsersUiState.Error::class.java)
+            val errorState = currentState as TopUsersUiState.Error
+            assertThat(errorState.errorType).isEqualTo(ErrorType.SERVER)
+        }
+
+    @Test
+    fun `when init block runs and usecase fails with generic error, state maps to default Error`() =
         runTest {
             val expectedException = RuntimeException()
             whenever(useCase()).thenReturn(Result.failure(expectedException))
@@ -68,7 +91,7 @@ class TopStackoverflowUsersViewModelTest {
             val currentState = viewModel.uiState.value
             assertThat(currentState).isInstanceOf(TopUsersUiState.Error::class.java)
             val errorState = currentState as TopUsersUiState.Error
-            assertThat(errorState.message).isEqualTo("An unexpected error occurred. Please try again.")
+            assertThat(errorState.errorType).isEqualTo(ErrorType.GENERIC)
         }
 
     @Test
