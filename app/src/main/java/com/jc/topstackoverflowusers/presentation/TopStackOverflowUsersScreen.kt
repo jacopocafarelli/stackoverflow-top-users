@@ -15,12 +15,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -41,8 +44,6 @@ import com.jc.topstackoverflowusers.domain.model.StackOverflowUser
 import com.jc.topstackoverflowusers.presentation.model.ErrorType
 import com.jc.topstackoverflowusers.presentation.model.TopUsersUiState
 import com.jc.topstackoverflowusers.ui.theme.TopStackoverflowUsersTheme
-import retrofit2.HttpException
-import java.io.IOException
 
 @Composable
 fun TopStackOverflowUsersScreen(
@@ -50,7 +51,13 @@ fun TopStackOverflowUsersScreen(
     viewModel: TopStackoverflowUsersViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    TopStackOverflowUsersScreen(uiState, { viewModel.onRetryClicked() }, modifier)
+    TopStackOverflowUsersScreen(
+        uiState = uiState,
+        onRetry = { viewModel.onRetryClicked() },
+        onFollow = viewModel::onFollowClicked,
+        onUnfollow = viewModel::onUnfollowClicked,
+        modifier = modifier
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +65,8 @@ fun TopStackOverflowUsersScreen(
 fun TopStackOverflowUsersScreen(
     uiState: TopUsersUiState,
     onRetry: () -> Unit,
+    onFollow: (Int) -> Unit,
+    onUnfollow: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -83,7 +92,11 @@ fun TopStackOverflowUsersScreen(
                     .padding(innerPadding)
             ) {
                 items(uiState.users) { stackOverflowUser ->
-                    StackOverflowUserItem(stackOverflowUser)
+                    StackOverflowUserItem(
+                        stackOverflowUser = stackOverflowUser,
+                        onFollow = onFollow,
+                        onUnfollow = onUnfollow
+                    )
                     HorizontalDivider()
                 }
             }
@@ -146,7 +159,12 @@ private fun Error(
 }
 
 @Composable
-fun StackOverflowUserItem(stackOverflowUser: StackOverflowUser, modifier: Modifier = Modifier) {
+fun StackOverflowUserItem(
+    stackOverflowUser: StackOverflowUser,
+    onFollow: (Int) -> Unit,
+    onUnfollow: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -175,10 +193,38 @@ fun StackOverflowUserItem(stackOverflowUser: StackOverflowUser, modifier: Modifi
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+
             Text(
                 text = "Reputation: ${formatReputation(stackOverflowUser.reputation)}",
                 style = MaterialTheme.typography.bodyMedium,
             )
+
+            if (stackOverflowUser.isFollowed) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        text = "FOLLOWED",
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        if (stackOverflowUser.isFollowed) {
+            Button(onClick = { onUnfollow(stackOverflowUser.id) }) {
+                Text("UNFOLLOW")
+            }
+        } else {
+            OutlinedButton(onClick = { onFollow(stackOverflowUser.id)  }) {
+                Text("FOLLOW")
+            }
         }
     }
 }
@@ -215,7 +261,9 @@ fun TopStackOverflowUsersScreenPreview() {
                     )
                 )
             ),
-            onRetry = {}
+            onRetry = {},
+            onFollow = {},
+            onUnfollow = {}
         )
     }
 }

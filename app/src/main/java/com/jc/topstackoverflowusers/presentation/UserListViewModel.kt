@@ -45,4 +45,12 @@ class TopStackoverflowUsersViewModel @Inject constructor(
     fun onRetryClicked() {
         loadUsers()
     }
+
+    fun onFollowClicked(accountId: Int) {
+        // TODO: call use case to follow
+    }
+
+    fun onUnfollowClicked(accountId: Int) {
+        // TODO: call use case to unfollow
+    }
 }
