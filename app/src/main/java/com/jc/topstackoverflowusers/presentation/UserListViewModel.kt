@@ -6,6 +6,7 @@ import com.jc.topstackoverflowusers.domain.usecase.GetTopUsersUseCase
 import com.jc.topstackoverflowusers.presentation.mapper.toErrorType
 import com.jc.topstackoverflowusers.presentation.model.TopUsersUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,16 +30,15 @@ class TopStackoverflowUsersViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { TopUsersUiState.Loading }
 
-            val result = getTopUsersUseCase()
-            result.fold(
-                onSuccess = { users ->
+            try {
+                getTopUsersUseCase().collect { users ->
                     _uiState.update { TopUsersUiState.Success(users) }
-                },
-                onFailure = { exception ->
-                    val errorType = exception.toErrorType()
-                    _uiState.update { TopUsersUiState.Error(errorType) }
                 }
-            )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                val errorType = e.toErrorType()
+                _uiState.update { TopUsersUiState.Error(errorType) }
+            }
         }
     }
 

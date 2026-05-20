@@ -203,13 +203,15 @@ fun TopStackOverflowUsersScreenPreview() {
                         id = 1,
                         name = "Test User 1",
                         profileImageUrl = "url 1",
-                        reputation = 200
+                        reputation = 200,
+                        isFollowed = true
                     ),
                     StackOverflowUser(
                         id = 1,
                         name = "Test User 2",
                         profileImageUrl = "url 2",
-                        reputation = 100
+                        reputation = 100,
+                        isFollowed = false
                     )
                 )
             ),

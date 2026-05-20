@@ -7,6 +7,8 @@ import com.jc.topstackoverflowusers.presentation.model.ErrorType
 import com.jc.topstackoverflowusers.presentation.model.TopUsersUiState
 import com.jc.topstackoverflowusers.test.rules.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.IOException
@@ -28,31 +30,33 @@ class TopStackoverflowUsersViewModelTest {
     private val useCase = mock<GetTopUsersUseCase>()
 
     @Test
-    fun `when init block runs and usecase succeeds, state is updated to Success and contains users`() = runTest {
-        val expectedUsers = listOf(
-            StackOverflowUser(
-                id = 1,
-                name = "User 1",
-                profileImageUrl = "url1",
-                reputation = 1000
+    fun `when init block runs and usecase succeeds, state is updated to Success and contains users`() =
+        runTest {
+            val expectedUsers = listOf(
+                StackOverflowUser(
+                    id = 1,
+                    name = "User 1",
+                    profileImageUrl = "url1",
+                    reputation = 1000,
+                    isFollowed = true
+                )
             )
-        )
-        whenever(useCase()).thenReturn(Result.success(expectedUsers))
+            whenever(useCase()).thenReturn(flowOf(expectedUsers))
 
-        val viewModel = TopStackoverflowUsersViewModel(useCase)
+            val viewModel = TopStackoverflowUsersViewModel(useCase)
 
-        val currentState = viewModel.uiState.value
-        assertThat(currentState).isInstanceOf(TopUsersUiState.Success::class.java)
-        val successState = currentState as TopUsersUiState.Success
-        assertThat(successState.users).isEqualTo(expectedUsers)
-    }
+            val currentState = viewModel.uiState.value
+            assertThat(currentState).isInstanceOf(TopUsersUiState.Success::class.java)
+            val successState = currentState as TopUsersUiState.Success
+            assertThat(successState.users).isEqualTo(expectedUsers)
+        }
 
     @Test
     fun `when init block runs and usecase fails with io error, state maps to network Error`() =
         runTest {
             val exceptionMessage = "Emulated exception"
             val expectedException = IOException(exceptionMessage)
-            whenever(useCase()).thenReturn(Result.failure(expectedException))
+            whenever(useCase()).thenReturn(flow { throw expectedException })
 
             val viewModel = TopStackoverflowUsersViewModel(useCase)
 
@@ -70,7 +74,7 @@ class TopStackoverflowUsersViewModelTest {
                 "{\"error\": \"Generic error\"}".toResponseBody(null)
             )
             val expectedException = HttpException(errorResponse)
-            whenever(useCase()).thenReturn(Result.failure(expectedException))
+            whenever(useCase()).thenReturn(flow { throw expectedException })
 
             val viewModel = TopStackoverflowUsersViewModel(useCase)
 
@@ -84,7 +88,7 @@ class TopStackoverflowUsersViewModelTest {
     fun `when init block runs and usecase fails with generic error, state maps to default Error`() =
         runTest {
             val expectedException = RuntimeException()
-            whenever(useCase()).thenReturn(Result.failure(expectedException))
+            whenever(useCase()).thenReturn(flow { throw expectedException })
 
             val viewModel = TopStackoverflowUsersViewModel(useCase)
 
@@ -95,32 +99,29 @@ class TopStackoverflowUsersViewModelTest {
         }
 
     @Test
-    fun `when onRetryClicked is called, it loads users`() = runTest {
-        val expectedException = RuntimeException("Initial Failure")
+    fun `when onRetryClicked is called, it re-collects users`() = runTest {
         val expectedUsers = listOf(
             StackOverflowUser(
                 id = 1,
-                name = "Test User",
-                profileImageUrl = "url",
-                reputation = 100
+                name = "User 1",
+                profileImageUrl = "url1",
+                reputation = 1000,
+                isFollowed = true
             )
         )
         whenever(useCase()).thenReturn(
-            Result.failure(expectedException),
-            Result.success(expectedUsers)
+            flow { throw RuntimeException("Fail") },
+            flowOf(expectedUsers)
         )
 
         val viewModel = TopStackoverflowUsersViewModel(useCase)
-
         assertThat(viewModel.uiState.value).isInstanceOf(TopUsersUiState.Error::class.java)
 
         viewModel.onRetryClicked()
 
         val currentState = viewModel.uiState.value
         assertThat(currentState).isInstanceOf(TopUsersUiState.Success::class.java)
-        val successState = currentState as TopUsersUiState.Success
-        assertThat(successState.users).isEqualTo(expectedUsers)
-        // Use case is called in init and on retry
+        assertThat((currentState as TopUsersUiState.Success).users).isEqualTo(expectedUsers)
         verify(useCase, times(2)).invoke()
     }
 }

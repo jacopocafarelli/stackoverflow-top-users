@@ -2,7 +2,7 @@ package com.jc.topstackoverflowusers.domain.usecase
 
 import com.jc.topstackoverflowusers.domain.model.StackOverflowUser
 import com.jc.topstackoverflowusers.domain.repository.UsersRepository
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class GetTopUsersUseCase @Inject constructor(
@@ -12,16 +12,7 @@ class GetTopUsersUseCase @Inject constructor(
     suspend operator fun invoke(
         page: Int = 1,
         pageSize: Int = DEFAULT_PAGE_SIZE
-    ): Result<List<StackOverflowUser>> {
-        return try {
-            val users = repository.getTopUsers(page = page, pageSize = pageSize)
-            Result.success(users)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-
-            Result.failure(e)
-        }
-    }
+    ): Flow<List<StackOverflowUser>> = repository.getTopUsers(page, pageSize)
 
     companion object {
         const val DEFAULT_PAGE_SIZE = 20

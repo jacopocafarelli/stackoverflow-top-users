@@ -3,7 +3,9 @@ package com.jc.topstackoverflowusers.domain.usecase
 import com.google.common.truth.Truth.assertThat
 import com.jc.topstackoverflowusers.domain.model.StackOverflowUser
 import com.jc.topstackoverflowusers.domain.repository.UsersRepository
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.mockito.kotlin.mock
@@ -21,33 +23,24 @@ class GetTopUsersUseCaseTest {
                 id = 1,
                 name = "Test User",
                 profileImageUrl = "url",
-                reputation = 100
+                reputation = 100,
+                isFollowed = true
             )
         )
-        whenever(repository.getTopUsers(page = 1, pageSize = 20)).thenReturn(expectedUsers)
-
-        val result = useCase()
-
-        assertThat(result.isSuccess).isTrue()
-        assertThat(result.getOrNull()).isEqualTo(expectedUsers)
-    }
-
-    @Test
-    fun `when repository throws a generic exception invoke returns failure result`() = runTest {
-        val expectedException = RuntimeException("Simulated exception")
-        whenever(repository.getTopUsers(page = 1, pageSize = 20)).thenThrow(expectedException)
-
-        val result = useCase()
-
-        assertThat(result.isFailure).isTrue()
-        assertThat(result.exceptionOrNull()?.message).isEqualTo("Simulated exception")
-    }
-
-    @Test(expected = CancellationException::class)
-    fun `when CancellationException invoke rethrows it to maintain structured concurrency`() = runTest {
         whenever(repository.getTopUsers(page = 1, pageSize = 20))
-            .thenThrow(CancellationException())
+            .thenReturn(flowOf(expectedUsers))
 
-        useCase()
+        val result = useCase().first()
+
+        assertThat(result).isEqualTo(expectedUsers)
+    }
+
+    @Test(expected = RuntimeException::class)
+    fun `when repository throws exception invoke propagates it`() = runTest {
+        val expectedException = RuntimeException("Simulated exception")
+        whenever(repository.getTopUsers(page = 1, pageSize = 20))
+            .thenReturn(flow { throw expectedException })
+
+        useCase().first()
     }
 }
