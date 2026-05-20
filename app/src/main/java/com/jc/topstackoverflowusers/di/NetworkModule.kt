@@ -48,10 +48,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(): Retrofit {
+    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         val contentType = "application/json".toMediaType()
         return Retrofit.Builder()
             .baseUrl("https://api.stackexchange.com/2.2/")
+            .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
     }
